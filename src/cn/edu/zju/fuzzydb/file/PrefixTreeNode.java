@@ -170,4 +170,12 @@ public class PrefixTreeNode {
 		
 	}
 	
+	public GroupPredicate getPredicate(){
+		return gp;
+	}
+	
+	public ArrayList<PrefixTreeNode> getChildren(){
+		return Child;
+	}
+	
 }
