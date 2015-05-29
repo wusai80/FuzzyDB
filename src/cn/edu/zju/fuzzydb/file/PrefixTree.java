@@ -46,23 +46,63 @@ public class PrefixTree {
 	}
 	
 	/**
-	 * 
+	 * expand current dataset into multiple groups for a given query
 	 * @param Groupcolumn
+	 * @param sql
 	 * @param confidence
 	 * @param errorRate
 	 */
-	public void expand(String Groupcolumn, double confidence, double errorRate){
+	public void expand(String Groupcolumn, String sql, double confidence, double errorRate){
 		if(currentNode == root){
 			//sample the original table
+			performSampling(Groupcolumn);
 			
+			while(!evaluateQuery(Groupcolumn, Property.baseTable, sql, confidence, errorRate)){
+				//get more samples
+				performSampling(Groupcolumn);
+			}
 		}
 		else{
 			//first try to use memory table to answer
-			
+			boolean stop = evaluateQuery(Groupcolumn, currentNode.getPredicate().getTable()+"_mem", sql, confidence, errorRate);
 			
 			//if cannot meet the requirement, start sampling and splitting the tree node
-			
+			if(!stop){
+				currentNode.split(Groupcolumn);
+				
+				while(!evaluateQuery(Groupcolumn, Property.baseTable, sql, confidence, errorRate)){
+					//get more samples
+					performSampling(Groupcolumn);
+				}
+			}
 		}
+	}
+	
+	/**
+	 * a user can select a specific group for expansion from the UI...
+	 * @param groupColumn
+	 * @param value  group value
+	 */
+	public void selectNewGroup(String groupColumn, String value){
+		for(PrefixTreeNode node: currentNode.getChildren()){
+			GroupPredicate gp = node.getPredicate();
+			String groupName = gp.getDimensionAt(gp.getDimensionNumber()-1);
+			String groupValue = gp.getValueAt(gp.getDimensionNumber()-1);
+			if(groupName.equalsIgnoreCase(groupColumn) && groupValue.equals(value)){
+				currentNode = node;
+				break;
+			}
+		}
+	}
+	
+	/**
+	 * use a filter to prune tuples not in the range for current results
+	 * @param columnName
+	 * @param low
+	 * @param up
+	 */
+	public void setFilter(String columnName, String low, String up){
+		//TODO
 	}
 	
 	/**
@@ -74,6 +114,31 @@ public class PrefixTree {
 		ArrayList<String> sqlCmd = new ArrayList<String>();
 		for(int i=0; i<Property.sampleBatchSize; i++)
 			insert(sqlCmd);
+		try {
+			Statement stmt = DBConnection.getConnection().createStatement();
+			for(String sql : sqlCmd){
+				stmt.addBatch(sql);
+			}
+			stmt.executeBatch();
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+	}
+	
+	/**
+	 * evaluate the query using the samples
+	 * @param Groupcolumn
+	 * @param table
+	 * @param sql
+	 * @param confidence
+	 * @param errorRate
+	 * @return stop or not
+	 */
+	public boolean evaluateQuery(String Groupcolumn, String table, String sql, double confidence, double errorRate){
+		//TODO
+		return true;
 	}
 	
 	/**
